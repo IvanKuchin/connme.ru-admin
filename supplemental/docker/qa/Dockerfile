@@ -67,7 +67,7 @@ RUN cd build \
     && cmake \
        -DPROJECT_NAME=__BUILD_REPO__ \
        -D-DMAIN_SUBDOMAIN=www \
-       -DIMAGE_SUBDOMAIN=images 
+       -DIMAGE_SUBDOMAIN=images \
        .. \
     && make -j2
 
