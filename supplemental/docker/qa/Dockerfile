@@ -5,15 +5,13 @@ ARG DB_LOGIN
 ARG DB_PASSWORD
 ARG DB_HOST
 
+ARG GIT_FOLDER=/backend
+
 LABEL maintainer="ivan.kuchin@gmail.com"
 LABEL org.opencontainers.image.source="https://github.com/IvanKuchin/__BUILD_REPO__"
 
 # following two commands suppose to be reused from cache
 RUN apt update &&  apt install --no-install-recommends --no-install-suggests -y git ca-certificates
-
-COPY . /backend
-WORKDIR /backend
-RUN git clone --depth 1 https://github.com/IvanKuchin/backend_pi.git ./src/pi
 
 RUN apt-get install --no-install-recommends --no-install-suggests -y software-properties-common
 RUN add-apt-repository -y ppa:jonathonf/ffmpeg-4
