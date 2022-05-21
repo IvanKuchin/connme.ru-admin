@@ -64,45 +64,42 @@ ARG LOCAL_INSTALL_DIR
 ########################
 # install dependencies #
 ########################
-RUN echo 123456
-RUN apt update  \
-    # && apt-get install --no-install-recommends --no-install-suggests -y software-properties-common \
-    # && add-apt-repository -y ppa:jonathonf/ffmpeg-4 \
-    # && apt update \
+RUN apt update \
+    && apt-get install --no-install-recommends --no-install-suggests -y software-properties-common \
+    && add-apt-repository -y ppa:jonathonf/ffmpeg-4 \
+    && apt update \
     && apt-get install --no-install-recommends --no-install-suggests -y \ 
         build-essential \
         file \
         cmake \
         gsfonts \
         graphicsmagick-libmagick-dev-compat \
-        # libavcodec-dev \
-        # libavformat-dev \
-        # libavutil-dev \
+        libavcodec-dev \
+        libavformat-dev \
+        libavutil-dev \
         libcurl4-openssl-dev \
         libgraphicsmagick++-dev \
-        # libhpdf-dev \
-        # libmaxminddb-dev \
+        libhpdf-dev \
+        libmaxminddb-dev \
         libmysqlclient-dev \
         libssl-dev \
         libwebp-dev \
         libarchive-dev \
         rapidjson-dev \
         pkg-config \
-        git
+        git \
+        wget \
+    && apt-get clean
 
 #############################
-# libwebsocket installation #
+# libwkhtmltox installation #
 #############################
-RUN git clone -b v2.2.0 --depth 1 https://github.com/warmcat/libwebsockets.git /libwebsockets
-WORKDIR /libwebsockets
-RUN mkdir build \
- && cd build \
- && cmake -DLWS_WITHOUT_DAEMONIZE:BOOL=FALSE -DLWS_WITH_STATIC=1 -DLWS_WITH_SHARED=1 -DCMAKE_INSTALL_PREFIX:PATH=/usr/local/share/libwebsockets/ .. \
- && make -j2 install && make clean
+RUN wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.trusty_amd64.deb
+RUN apt install --no-install-recommends --no-install-suggests -y ./wkhtmltox_0.12.5-1.trusty_amd64.deb
 
-############
-# pull src #
-############
+###############
+# pull PI src #
+###############
 COPY . ${GIT_FOLDER}
 WORKDIR ${GIT_FOLDER}
 RUN git clone --depth 1 https://github.com/IvanKuchin/backend_pi.git ./src/pi
@@ -123,8 +120,8 @@ RUN git rev-parse HEAD > ./supplemental/git/git_commit_id
 ##################### 
 # build from source #
 ##################### 
-RUN mkdir build \
-    && cd build \ 
+RUN mkdir build
+RUN cd build \ 
     && cmake \
         -DPROJECT_NAME=${BUILD_REPO} \
         -DMAIN_SUBDOMAIN=${MAIN_SUBDOMAIN} \
@@ -133,8 +130,6 @@ RUN mkdir build \
         -DIMAGEROOTDIR=${IMAGEROOTDIR} \
         -DLOCAL_INSTALL_DIR=${LOCAL_INSTALL_DIR} \
         -DBUILD_RELEASE_NUMBERS=${BUILD_RELEASE_NUMBERS} \
-        -DFFPMPEG_DISABLE=true \
-        -DMAXMIND_DISABLE=true \
         .. \
     && make -j2 package
 
@@ -155,16 +150,54 @@ WORKDIR ${GIT_FOLDER}
 # copy from build  #
 ####################
 COPY --from=build ${GIT_FOLDER}/build/${BUILD_REPO}-infra.deb ./
-COPY --from=build ${GIT_FOLDER}/build/${BUILD_REPO}-chat.deb ./
-
+COPY --from=build ${GIT_FOLDER}/build/${BUILD_REPO}-admin.deb ./
+COPY --from=build ${GIT_FOLDER}/supplemental/apache2/ /etc/apache2/
 
 ####################
 # install binaries #
 ####################
 RUN apt update \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+               software-properties-common \
+               ssmtp \
+               apache2 \
+    # && add-apt-repository -y ppa:jonathonf/ffmpeg-4 \
+    # && apt update \
     && apt install  --no-install-recommends --no-install-suggests -y ./*.deb \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR ${LOCAL_INSTALL_DIR}/chat
-CMD ["./chat-server", "-s"]
+#########################
+# configure mail sender #
+#########################
+RUN sed -i "s/#rewriteDomain=/rewriteDomain=${BUILD_REPO}/g" /etc/ssmtp/ssmtp.conf
+
+#####################
+# configure apache2 #
+#####################
+RUN mkdir -p ${IMAGEROOTDIR}
+RUN mkdir ${ROOTDIR}/logs/
+
+RUN a2enmod cgi \
+    && a2enmod rewrite \
+    && a2enmod expires \
+    && a2enconf mod_expires \
+    && a2dissite `ls /etc/apache2/sites-enabled/` \
+    && a2ensite *www
+
+############################################################
+## forward request and error logs to docker log collector ##
+############################################################
+RUN ln -sf /dev/stdout ${ROOTDIR}/logs/access.log \
+ && ln -sf /dev/stderr ${ROOTDIR}/logs/error.log
+
+####################################################################
+# change folders to proper owner                                   #
+####################################################################
+RUN chown -R www-data:www-data ${ROOTDIR} \
+ && chown -R www-data:www-data ${IMAGEROOTDIR} \
+ && chown -R www-data:www-data ${LOCAL_INSTALL_DIR}
+
+EXPOSE 80
+
+CMD ["apachectl", "-D", "FOREGROUND", ""]
 
