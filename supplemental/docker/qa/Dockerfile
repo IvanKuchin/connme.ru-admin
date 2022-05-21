@@ -11,6 +11,13 @@ ARG GIT_FOLDER=/backend
 LABEL maintainer="ivan.kuchin@gmail.com"
 LABEL org.opencontainers.image.source="https://github.com/IvanKuchin/__BUILD_REPO__"
 
+
+###########################################
+# check if all mandatory args are defined #
+###########################################
+RUN [ -z "$BUILD_REPO" ] && echo "BUILD_REPO is required" && exit 1 || true
+RUN echo repository is $BUILD_REPO
+
 # following two commands suppose to be reused from cache
 RUN apt update &&  apt install --no-install-recommends --no-install-suggests -y git ca-certificates
 
