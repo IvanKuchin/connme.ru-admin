@@ -51,8 +51,22 @@ RUN export LC_ALL=en_US.utf8
 #############################
 RUN apt-get install --no-install-recommends --no-install-suggests -y wget
 RUN wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.trusty_amd64.deb
-RUN dpkg -i  wkhtmltox_0.12.5-1.trusty_amd64.deb || true     # trick to force dpkg return successfull return code
-RUN apt install -f --no-install-recommends --no-install-suggests -y
+RUN apt install --no-install-recommends --no-install-suggests -y ./wkhtmltox_0.12.5-1.trusty_amd64.deb
+
+###############
+# pull PI src #
+###############
+COPY . ${GIT_FOLDER}
+WORKDIR ${GIT_FOLDER}
+RUN git clone --depth 1 https://github.com/IvanKuchin/backend_pi.git ./src/pi
+
+######################################################
+# pull PD src                                        #
+# assume the repo name is xxxxxx-admin               #
+# below command cuts out "dash" and everything after #
+######################################################
+RUN git clone --depth 1 https://github.com/IvanKuchin/${BUILD_REPO%%-*}.git /tmp/${BUILD_REPO}/
+RUN cp -R /tmp/${BUILD_REPO}/src/pd ./src
 
 ##################
 # save commit id #
