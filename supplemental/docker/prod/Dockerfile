@@ -228,5 +228,5 @@ RUN chown -R www-data:www-data ${ROOTDIR} \
 
 EXPOSE 80
 
-CMD ["apachectl", "-D", "FOREGROUND", ""]
+CMD ["apachectl", "-D", "FOREGROUND"]
 
