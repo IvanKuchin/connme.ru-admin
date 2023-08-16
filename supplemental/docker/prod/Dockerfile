@@ -48,8 +48,8 @@ RUN apt update \
 ####################
 #RUN apt-get install --no-install-recommends --no-install-suggests -y tzdata \
 #    && rm -rf /var/lib/apt/lists/*
-RUN cp /usr/share/zoneinfo/Europe/Moscow /etc/localtime
-RUN echo "Europe/Moscow" > /etc/timezone
+# RUN cp /usr/share/zoneinfo/Europe/Moscow /etc/localtime
+# RUN echo "Europe/Moscow" > /etc/timezone
 RUN date
 
 ##############################
